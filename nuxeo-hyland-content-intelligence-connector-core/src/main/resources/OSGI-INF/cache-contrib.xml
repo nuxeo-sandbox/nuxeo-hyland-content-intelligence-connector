@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<component name="org.nuxeo.labs.aws.bedrock.cache">
+<component name="org.nuxeo.labs.hyland.content.intelligence.cache">
     <extension target="org.nuxeo.ecm.core.cache.CacheService" point="caches">
         <cache name="bedrock_cache">
             <ttl>60</ttl>

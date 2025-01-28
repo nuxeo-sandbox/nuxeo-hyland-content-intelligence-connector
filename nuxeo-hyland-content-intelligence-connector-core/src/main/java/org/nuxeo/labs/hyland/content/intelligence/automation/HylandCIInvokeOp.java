@@ -1,4 +1,4 @@
-package org.nuxeo.labs.aws.bedrock.automation;
+package org.nuxeo.labs.hyland.content.intelligence.automation;
 
 import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
@@ -6,13 +6,13 @@ import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
-import org.nuxeo.labs.aws.bedrock.service.AWSBedrockService;
+import org.nuxeo.labs.hyland.content.intelligence.service.HylandCIService;
 
-@Operation(id = AWSBedrockInvokeOp.ID, category = "AWS", label = "Invoke Bedrock and return the JSON response as a blob",
-        description = "Invoke the AWS Bedrock API")
-public class AWSBedrockInvokeOp {
+@Operation(id = HylandCIInvokeOp.ID, category = "Hyland Content Intelligence", label = "Invoke Hyland COntent Intelligence and return the JSON response as a blob",
+        description = "Invoke the Hyland Content Intelligence API")
+public class HylandCIInvokeOp {
 
-    public static final String ID = "Bedrock.Invoke";
+    public static final String ID = "HylandContentIntelligence.Invoke";
 
     @Param(name = "modelName", required = true)
     protected String modelName;
@@ -24,11 +24,11 @@ public class AWSBedrockInvokeOp {
     protected boolean useCache = false;
 
     @Context
-    AWSBedrockService awsBedrockService;
+    HylandCIService ciService;
 
     @OperationMethod
     public Blob run() {
-        String response = awsBedrockService.invoke(modelName, jsonPayload, useCache);
+        String response = ciService.invoke(modelName, jsonPayload, useCache);
         return new StringBlob(response, "application/json");
     }
 

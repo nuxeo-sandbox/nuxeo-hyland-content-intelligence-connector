@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
-<component name="org.nuxeo.labs.aws.bedrock.service">
+<component name="org.nuxeo.labs.hyland.content.intelligence.service">
 
-  <implementation class="org.nuxeo.labs.aws.bedrock.service.AWSBedrockServiceImpl" />
+  <implementation class="org.nuxeo.labs.hyland.content.intelligence.service.HylandCIServiceImpl" />
 
   <service>
-    <provide interface="org.nuxeo.labs.aws.bedrock.service.AWSBedrockService" />
+    <provide interface="org.nuxeo.labs.hyland.content.intelligence.service.HylandCIService" />
   </service>
 </component>
