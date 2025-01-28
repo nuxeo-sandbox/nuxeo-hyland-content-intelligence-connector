@@ -10,4 +10,4 @@ So as of "today", the work is about getting code from nuxeo-baws-bedrock-connect
 So...
 
 > [!WARNING]
-> Do not use it now (anyway, it does noit build :-))
+> Do not use it now (anyway, it does not build :-))
