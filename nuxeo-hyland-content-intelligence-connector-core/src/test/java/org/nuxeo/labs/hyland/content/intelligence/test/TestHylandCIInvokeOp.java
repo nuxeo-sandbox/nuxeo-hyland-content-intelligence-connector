@@ -20,6 +20,8 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 import javax.inject.Inject;
 
+import static org.junit.Assert.assertNotNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -64,10 +66,9 @@ public class TestHylandCIInvokeOp {
 
         Blob json = (Blob) automationService.run(ctx, HylandCIInvokeOp.ID, params);
         Assert.assertNotNull(json);
+        
         JSONObject responseBody = new JSONObject(json.getString());
-        double[] embeddings = responseBody.getJSONArray("response")
-                .toList().stream().mapToDouble(v -> ((BigDecimal) v).doubleValue()).toArray();
-        Assert.assertNotNull(embeddings);
-        Assert.assertEquals(embeddings.length, 1024);
+        String description = responseBody.getString("response");
+        assertNotNull(description);
     }
 }
