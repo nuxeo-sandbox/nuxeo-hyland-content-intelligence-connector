@@ -15,7 +15,7 @@ public class HylandCIInvokeOp {
     public static final String ID = "HylandContentIntelligence.Invoke";
 
     @Param(name = "endpoint", required = true)
-    protected String endPoint;
+    protected String endpoint;
 
     @Param(name = "jsonPayload", required = true)
     protected String jsonPayload;

@@ -18,19 +18,11 @@
  */
 package org.nuxeo.labs.hyland.content.intelligence.test;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
-import org.nuxeo.common.utils.FileUtils;
-import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.RunnerFeature;
-
-import nuxeo.ldt.parser.test.SimpleFeatureCustom;
 
 import org.nuxeo.labs.hyland.content.intelligence.service.HylandCIService;
 
@@ -67,11 +59,9 @@ public class ConfigCheckerFeature implements RunnerFeature {
 
         systemProps = System.getProperties();
 
-        Boolean hasUrl = hasheaderName = hasHeaderValue,;
-
-        hasUrl = hasProperty(HylandCIService.CONTENT_INTELL_URL_PARAM, ENV_URL);
-        hasheaderName = hasProperty(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM, ENV_HEADER_NAME);
-        hasHeaderValue = hasProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM, ENV_HEADER_VALUE);
+        boolean hasUrl = hasProperty(HylandCIService.CONTENT_INTELL_URL_PARAM, ENV_URL);
+        boolean hasheaderName = hasProperty(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM, ENV_HEADER_NAME);
+        boolean hasHeaderValue = hasProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM, ENV_HEADER_VALUE);
 
         hasAllProperties = hasUrl && hasheaderName && hasHeaderValue;
 
@@ -86,9 +76,9 @@ public class ConfigCheckerFeature implements RunnerFeature {
 
         String value = systemProps.getProperty(property);
 
-        if(Stringutils.isBlank(value)) {
+        if(StringUtils.isBlank(value)) {
             value = System.getenv(envVar);
-            if(!Stringutils.isBlank(value)) {
+            if(!StringUtils.isBlank(value)) {
                 systemProps.put(property, value);
                 return true;
             }
@@ -96,6 +86,7 @@ public class ConfigCheckerFeature implements RunnerFeature {
 
         return false;
     }
+    
     
     @Override
     public void stop(FeaturesRunner runner) throws Exception {
@@ -105,8 +96,7 @@ public class ConfigCheckerFeature implements RunnerFeature {
         p.remove(HylandCIService.CONTENT_INTELL_URL_PARAM);
         p.remove(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM);
         p.remove(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM);
-
-        super.stop(runner);
     }
+    
 
 }

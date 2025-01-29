@@ -96,7 +96,7 @@ public class TestHylandCIService {
         Assert.assertNotNull(response);
 
         CacheService cacheService = Framework.getService(CacheService.class);
-        Cache cache = cacheService.getCache(BEDROCK_CACHE);
+        Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
         Assert.assertTrue(cache.hasEntry(getCacheKey(titanModelId,payload)));
     }
 
@@ -115,7 +115,7 @@ public class TestHylandCIService {
         String cachedResponse = "123";
 
         CacheService cacheService = Framework.getService(CacheService.class);
-        Cache cache = cacheService.getCache(BEDROCK_CACHE);
+        Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
         cache.put(getCacheKey(modelId,payload),cachedResponse);
 
         String response = hylandCIService.invoke(modelId, payload, true);

@@ -1,5 +1,6 @@
 package org.nuxeo.labs.hyland.content.intelligence.test;
 
+import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -16,8 +17,6 @@ import org.nuxeo.labs.hyland.content.intelligence.test.ConfigCheckerFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-
-import com.azul.crs.client.FileUtils;
 
 import javax.inject.Inject;
 

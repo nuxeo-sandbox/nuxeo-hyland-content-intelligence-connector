@@ -27,8 +27,8 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
         //. . . here, send REST API to Content Intelligence . . .
         //. . . get config parameter values for URL to call, authentication, etc.
         String url = Framework.getProperty(HylandCIService.CONTENT_INTELL_URL_PARAM);
-        String authenticationHeader = Framework.getProperty((HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM);
-        String authenticationValue = Framework.getProperty((HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM);
+        String authenticationHeader = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM);
+        String authenticationValue = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM);
         
         String response = null;
         //. . . etc.
@@ -45,7 +45,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
     }
 
     public static String getCacheKey(String endpoint, String jsonPayload) {
-        return modelName+jsonPayload;
+        return endpoint + jsonPayload;
     }
 
 }
