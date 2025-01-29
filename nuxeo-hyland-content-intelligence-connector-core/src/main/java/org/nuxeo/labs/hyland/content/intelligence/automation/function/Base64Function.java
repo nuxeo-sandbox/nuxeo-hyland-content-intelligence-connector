@@ -1,4 +1,4 @@
-package org.nuxeo.labs.aws.bedrock.automation.function;
+package org.nuxeo.labs.hyland.content.intelligence.automation.function;
 
 import org.apache.commons.io.IOUtils;
 import org.nuxeo.ecm.automation.context.ContextHelper;

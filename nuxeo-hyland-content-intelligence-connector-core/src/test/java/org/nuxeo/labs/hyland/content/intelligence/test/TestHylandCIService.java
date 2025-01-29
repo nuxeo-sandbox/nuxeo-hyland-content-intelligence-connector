@@ -1,8 +1,8 @@
-package org.nuxeo.labs.aws.bedrock;
+package org.nuxeo.labs.hyland.content.intelligence.test;
 
 import static org.junit.Assert.assertNotNull;
-import static org.nuxeo.labs.aws.bedrock.service.AWSBedrockServiceImpl.BEDROCK_CACHE;
-import static org.nuxeo.labs.aws.bedrock.service.AWSBedrockServiceImpl.getCacheKey;
+import static org.nuxeo.labs.hyland.content.intelligence.service.HylandCIServiceImpl.CONTENT_INTELL_CACHE;
+import static org.nuxeo.labs.hyland.content.intelligence.service.HylandCIServiceImpl.getCacheKey;
 
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
@@ -13,7 +13,8 @@ import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.cache.Cache;
 import org.nuxeo.ecm.core.cache.CacheService;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
-import org.nuxeo.labs.aws.bedrock.service.AWSBedrockService;
+import org.nuxeo.labs.hyland.content.intelligence.service.HylandCIService;
+import org.nuxeo.labs.hyland.content.intelligence.test.ConfigCheckerFeature;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -27,27 +28,29 @@ import java.util.Base64;
 
 @RunWith(FeaturesRunner.class)
 @Features({PlatformFeature.class})
-@Deploy("nuxeo-aws-bedrock-connector-core")
-public class TestAWSBedrockService {
+@Deploy("nuxeo-hyland-content-intelligence-connector-core")
+public class TestHylandCIService {
 
     @Inject
-    protected AWSBedrockService awsbedrockservice;
+    protected HylandCIService hylandCIService;
 
     @Test
     public void testService() {
-        assertNotNull(awsbedrockservice);
+        assertNotNull(hylandCIService);
     }
 
     @Test
     public void testGetTextEmbeddings() {
-        Assume.assumeTrue(AwsCredentialChecker.isSet());
+        
+        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+
         String titanModelId = "amazon.titan-embed-text-v2:0";
         String payload = """
                 {
                     "inputText":"This some sample text"
                 }"
                 """;
-        String response = awsbedrockservice.invoke(titanModelId, payload);
+        String response = hylandCIService.invoke(titanModelId, payload);
         JSONObject responseBody = new JSONObject(response);
         double[] embeddings = responseBody.getJSONArray("embedding")
                 .toList().stream().mapToDouble(v -> ((BigDecimal) v).doubleValue()).toArray();
@@ -57,7 +60,9 @@ public class TestAWSBedrockService {
 
     @Test
     public void testGetImageEmbeddings() throws IOException {
-        Assume.assumeTrue(AwsCredentialChecker.isSet());
+        
+        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+
         byte[] fileContent = FileUtils.readFileToByteArray(new File(getClass().getResource("/files/musubimaru.png").getPath()));
         String encodedString = Base64.getEncoder().encodeToString(fileContent);
 
@@ -68,7 +73,7 @@ public class TestAWSBedrockService {
                     "inputImage": "%s"
                 }
                 """, encodedString);
-        String response = awsbedrockservice.invoke(titanModelId, payload);
+        String response = hylandCIService.invoke(titanModelId, payload);
         JSONObject responseBody = new JSONObject(response);
         double[] embeddings = responseBody.getJSONArray("embedding")
                 .toList().stream().mapToDouble(v -> ((BigDecimal) v).doubleValue()).toArray();
@@ -78,14 +83,16 @@ public class TestAWSBedrockService {
 
     @Test
     public void testResponseCaching() {
-        Assume.assumeTrue(AwsCredentialChecker.isSet());
+
+        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+
         String titanModelId = "amazon.titan-embed-text-v2:0";
         String payload = """
                 {
                     "inputText":"This some sample text"
                 }"
                 """;
-        String response = awsbedrockservice.invoke(titanModelId, payload, true);
+        String response = hylandCIService.invoke(titanModelId, payload, true);
         Assert.assertNotNull(response);
 
         CacheService cacheService = Framework.getService(CacheService.class);
@@ -95,7 +102,9 @@ public class TestAWSBedrockService {
 
     @Test
     public void testCacheHit() {
-        Assume.assumeTrue(AwsCredentialChecker.isSet());
+
+        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+
         String modelId = "the model that don't exist yet";
         String payload = """
                 {
@@ -109,7 +118,7 @@ public class TestAWSBedrockService {
         Cache cache = cacheService.getCache(BEDROCK_CACHE);
         cache.put(getCacheKey(modelId,payload),cachedResponse);
 
-        String response = awsbedrockservice.invoke(modelId, payload, true);
+        String response = hylandCIService.invoke(modelId, payload, true);
         Assert.assertEquals(cachedResponse, response);
     }
 

@@ -1,4 +1,4 @@
-package org.nuxeo.labs.aws.bedrock;
+package org.nuxeo.labs.hyland.content.intelligence.test;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
@@ -7,7 +7,7 @@ import org.junit.runner.RunWith;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
-import org.nuxeo.labs.aws.bedrock.automation.function.Base64Function;
+import org.nuxeo.labs.hyland.content.intelligence.automation.function.Base64Function;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;

@@ -1,10 +1,10 @@
 <!-- See documentation at http://doc.nuxeo.com/x/HgIz -->
-<package type="addon" name="nuxeo-aws-bedrock-connector" version="@VERSION@">
-  <title>Nuxeo AWS Bedrock Connector</title>
+<package type="addon" name="nuxeo-hyland-content-intelligence-connector" version="@VERSION@">
+  <title>Nuxeo Hyland Content Intelligence Connector</title>
   <description>
-    <p>A connector for AWS Bedrock</p>
+    <p>A connector for yland Content Intelligence</p>
   </description>
-  <home-page>https://github.com/nuxeo-sandbox/nuxeo-aws-bedrock-connector</home-page>
+  <home-page>https://github.com/nuxeo-sandbox/nuxeo-hyland-content-intelligence-connector</home-page>
   <vendor>Hyland</vendor>
   <installer restart="true" />
   <uninstaller restart="true" />
