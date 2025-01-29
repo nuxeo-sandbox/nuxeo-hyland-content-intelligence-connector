@@ -35,7 +35,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
         // Get config parameter values for URL to call, authentication, etc.
         String url = Framework.getProperty(HylandCIService.CONTENT_INTELL_URL_PARAM);
         String authenticationHeaderName = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM);
-        String authenticationheaderValue = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM);
+        String authenticationHeaderValue = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM);
 
         
         if(!endpoint.startsWith("/")) {
@@ -48,7 +48,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
-                .header(authenticationHeaderName, authenticationheaderValue)
+                .header(authenticationHeaderName, authenticationHeaderValue)
                 .POST(HttpRequest.BodyPublishers.ofString(jsonPayload, StandardCharsets.UTF_8))
                 .build();
         
