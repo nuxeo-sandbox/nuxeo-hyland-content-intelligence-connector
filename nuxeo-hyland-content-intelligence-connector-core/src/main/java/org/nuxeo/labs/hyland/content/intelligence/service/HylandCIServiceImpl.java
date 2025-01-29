@@ -1,5 +1,13 @@
 package org.nuxeo.labs.hyland.content.intelligence.service;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+
+import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.cache.Cache;
 import org.nuxeo.ecm.core.cache.CacheService;
 import org.nuxeo.runtime.api.Framework;
@@ -24,22 +32,43 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
             }
         }
 
-        //. . . here, send REST API to Content Intelligence . . .
-        //. . . get config parameter values for URL to call, authentication, etc.
+        // Get config parameter values for URL to call, authentication, etc.
         String url = Framework.getProperty(HylandCIService.CONTENT_INTELL_URL_PARAM);
-        String authenticationHeader = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM);
-        String authenticationValue = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM);
+        String authenticationHeaderName = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM);
+        String authenticationheaderValue = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM);
+
         
-        String response = null;
-        //. . . etc.
-        if(!url.endsWith("/")) {
+        if(!endpoint.startsWith("/")) {
             url += "/";
         }
         url += endpoint;
-        // (in case people start the endpoint parameter with a slash)
-        url = url.replace("//", "/");
 
-        //. . . format the request, call the API, get the result . . .
+        // Prepare the request
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .header(authenticationHeaderName, authenticationheaderValue)
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload, StandardCharsets.UTF_8))
+                .build();
+        
+        String aa = request.headers().toString();
+        // Go.
+        String response = null;
+        try {
+            HttpResponse<String> httpResponse = client.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            response = httpResponse.body();
+            
+        } catch (IOException e) {
+            throw new NuxeoException("Network error", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Preserve interrupted state
+            throw new NuxeoException("Request was interrupted", e);
+        } catch (Exception e) {
+            throw new NuxeoException("Unexpected error", e);
+        }
+        
 
         return response;
     }

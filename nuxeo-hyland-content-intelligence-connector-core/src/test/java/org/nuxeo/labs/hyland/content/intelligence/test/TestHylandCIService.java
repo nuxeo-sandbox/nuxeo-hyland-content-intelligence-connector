@@ -27,7 +27,7 @@ import java.math.BigDecimal;
 import java.util.Base64;
 
 @RunWith(FeaturesRunner.class)
-@Features({PlatformFeature.class})
+@Features({ PlatformFeature.class, ConfigCheckerFeature.class })
 @Deploy("nuxeo-hyland-content-intelligence-connector-core")
 public class TestHylandCIService {
 
@@ -40,8 +40,31 @@ public class TestHylandCIService {
     }
 
     @Test
+    public void testGetImageDescription() throws Exception {
+
+        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+
+        byte[] fileContent = FileUtils.readFileToByteArray(
+                new File(getClass().getResource("/files/musubimaru.png").getPath()));
+        String encodedString = Base64.getEncoder().encodeToString(fileContent);
+
+        String payload = String.format("""
+                {
+                    "type" : "base64",
+                    "media_type": "image/png",
+                    "override_request": "",
+                    "data": "%s"
+                }
+                """, encodedString);
+
+        String response = hylandCIService.invoke("/description", payload);
+        JSONObject responseBody = new JSONObject(response);
+        Assert.assertNotNull(responseBody);
+    }
+
+    @Test
     public void testGetTextEmbeddings() {
-        
+
         Assume.assumeTrue(ConfigCheckerFeature.isSetup());
 
         String titanModelId = "amazon.titan-embed-text-v2:0";
@@ -53,17 +76,21 @@ public class TestHylandCIService {
         String response = hylandCIService.invoke(titanModelId, payload);
         JSONObject responseBody = new JSONObject(response);
         double[] embeddings = responseBody.getJSONArray("embedding")
-                .toList().stream().mapToDouble(v -> ((BigDecimal) v).doubleValue()).toArray();
+                                          .toList()
+                                          .stream()
+                                          .mapToDouble(v -> ((BigDecimal) v).doubleValue())
+                                          .toArray();
         Assert.assertNotNull(embeddings);
         Assert.assertEquals(embeddings.length, 1024);
     }
 
     @Test
     public void testGetImageEmbeddings() throws IOException {
-        
+
         Assume.assumeTrue(ConfigCheckerFeature.isSetup());
 
-        byte[] fileContent = FileUtils.readFileToByteArray(new File(getClass().getResource("/files/musubimaru.png").getPath()));
+        byte[] fileContent = FileUtils.readFileToByteArray(
+                new File(getClass().getResource("/files/musubimaru.png").getPath()));
         String encodedString = Base64.getEncoder().encodeToString(fileContent);
 
         String titanModelId = "amazon.titan-embed-image-v1";
@@ -76,7 +103,10 @@ public class TestHylandCIService {
         String response = hylandCIService.invoke(titanModelId, payload);
         JSONObject responseBody = new JSONObject(response);
         double[] embeddings = responseBody.getJSONArray("embedding")
-                .toList().stream().mapToDouble(v -> ((BigDecimal) v).doubleValue()).toArray();
+                                          .toList()
+                                          .stream()
+                                          .mapToDouble(v -> ((BigDecimal) v).doubleValue())
+                                          .toArray();
         Assert.assertNotNull(embeddings);
         Assert.assertEquals(embeddings.length, 1024);
     }
@@ -97,7 +127,7 @@ public class TestHylandCIService {
 
         CacheService cacheService = Framework.getService(CacheService.class);
         Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-        Assert.assertTrue(cache.hasEntry(getCacheKey(titanModelId,payload)));
+        Assert.assertTrue(cache.hasEntry(getCacheKey(titanModelId, payload)));
     }
 
     @Test
@@ -116,7 +146,7 @@ public class TestHylandCIService {
 
         CacheService cacheService = Framework.getService(CacheService.class);
         Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-        cache.put(getCacheKey(modelId,payload),cachedResponse);
+        cache.put(getCacheKey(modelId, payload), cachedResponse);
 
         String response = hylandCIService.invoke(modelId, payload, true);
         Assert.assertEquals(cachedResponse, response);

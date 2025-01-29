@@ -17,7 +17,7 @@ import java.io.IOException;
 
 @RunWith(FeaturesRunner.class)
 @Features({AutomationFeature.class})
-@Deploy("nuxeo-aws-bedrock-connector-core")
+@Deploy("nuxeo-hyland-content-intelligence-connector-core")
 public class TestBase64Function {
 
     @Test

@@ -75,8 +75,9 @@ public class ConfigCheckerFeature implements RunnerFeature {
     protected boolean hasProperty(String property, String envVar) {
 
         String value = systemProps.getProperty(property);
-
+        
         if(StringUtils.isBlank(value)) {
+            value = System.getenv(envVar);
             value = System.getenv(envVar);
             if(!StringUtils.isBlank(value)) {
                 systemProps.put(property, value);
