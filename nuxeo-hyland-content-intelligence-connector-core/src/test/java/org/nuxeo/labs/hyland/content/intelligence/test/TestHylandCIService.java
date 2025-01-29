@@ -49,26 +49,28 @@ import java.util.Base64;
 @Features({ PlatformFeature.class, ConfigCheckerFeature.class })
 @Deploy("nuxeo-hyland-content-intelligence-connector-core")
 public class TestHylandCIService {
-    
-    protected static String TEST_IMAGE_PATH = "/files/musubimaru.png";
-    
-    protected static String TEST_IMAGE_MIMETYPE = "image/png";
-    
+
+    protected static final String TEST_IMAGE_PATH = "/files/dc-3.jpg";
+
+    protected static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
+
+    protected static final String TEST_IMAGE_DESCRIPTION = getTestImageDescription();
+
     protected static String testImageBase64 = null;
 
     @Inject
     protected HylandCIService hylandCIService;
-    
+
     @Before
     public void onceExecutedBeforeAll() throws Exception {
-        
-        if(testImageBase64 == null) {
+
+        if (testImageBase64 == null) {
             byte[] fileContent = FileUtils.readFileToByteArray(
                     new File(getClass().getResource(TEST_IMAGE_PATH).getPath()));
             testImageBase64 = Base64.getEncoder().encodeToString(fileContent);
         }
     }
-    
+
     @Test
     public void testService() {
         assertNotNull(hylandCIService);
@@ -82,18 +84,18 @@ public class TestHylandCIService {
         String payload = String.format("""
                 {
                     "type" : "base64",
-                    "media_type": "image/png",
+                    "media_type": "%s",
                     "override_request": "",
                     "data": "%s"
                 }
-                """, testImageBase64);
+                """, TEST_IMAGE_MIMETYPE, testImageBase64);
 
         String response = hylandCIService.invoke("/description", payload);
         assertNotNull(response);
-        
+
         JSONObject responseBody = new JSONObject(response);
         assertNotNull(responseBody);
-        
+
         String description = responseBody.getString("response");
         assertNotNull(description);
     }
@@ -101,21 +103,80 @@ public class TestHylandCIService {
     // TODO: unit test the /metadata endpoint
     @Test
     public void testGetImageMetadata() throws Exception {
-        
-    }
 
+        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+
+        String payload = String.format("""
+                {
+                    "source": {
+                      "type" : "base64",
+                      "media_type": "%s",
+                      "override_request": "",
+                      "description": "%s",
+                      "data": "%s"
+                    },
+                    "metadata_to_fill": [
+                      "s1:f1",
+                      "s1:f2",
+                      "s1:f3"
+                    ],
+                    "examples": [
+                      {
+                        "description": "This image displays Disney characters: Mickey Mouse, Daisy Duck and Goofy. They are playing soccer and and look very happy.",
+                        "s1:f1": "mickey|daisy|goofy",
+                        "s1:f2": "Disney",
+                        "s1:f3": "generic",
+                      },
+                      {
+                        "description": "In this image, we can see some iconic Disney characters. We can see Goofy, who is laughing. There is also Mickey Mouse, jumping high, and Donald, sleeping.",
+                        "s1:f1": "goofy|mickey|donald",
+                        "s1:f2": "Disney",
+                        "s1:f3": "generic",
+                      },
+                      {
+                        "description": "This image shows 4 famous Disney characters: Mickey Mouse, Donald Duck, Daisy Duck and Scrooge McDuck.",
+                        "s1:f1": "mickey|donald|scrooge|daisy",
+                        "s1:f2": "Disney",
+                        "s1:f3": "private",
+                      },
+                      {
+                        "description": "Here we have mickey Mouse and Daisy Duck dancing around a fire, while Goofy is playing guitar.",
+                        "s1:f1": "goofy|mickey|daisy",
+                        "s1:f2": "Disney",
+                        "s1:f3": "generic",
+                      },
+                      {
+                        "description": "In this image, characters from different universes are displayed. We have Mickey Mouse talking with Darth Vador, while Indiana Jones is having a coffee with Captain America.",
+                        "s1:f1": "mickey|dart|indiana|captainamerica",
+                        "s1:f2": "Disney|Marvel|SW",
+                        "s1:f3": "proprietary",
+                      }
+                    ]
+                }
+                """, TEST_IMAGE_MIMETYPE, TEST_IMAGE_DESCRIPTION, testImageBase64);
+
+        String response = hylandCIService.invoke("/metadata", payload);
+        assertNotNull(response);
+
+        JSONObject responseBody = new JSONObject(response);
+        assertNotNull(responseBody);
+
+        String description = responseBody.getString("response");
+        assertNotNull(description);
+
+    }
 
     // TODO: unit test the /embedding endpoint
     @Test
     public void testGetImageEmbedding() throws Exception {
-        
+
     }
 
     @Test
     public void testResponseCaching() {
 
         Assume.assumeTrue(ConfigCheckerFeature.isSetup());
-        
+
         String endpoint = "/description";
 
         String payload = String.format("""
@@ -155,6 +216,13 @@ public class TestHylandCIService {
 
         String response = hylandCIService.invoke(endpoint, payload, true);
         Assert.assertEquals(cachedResponse, response);
+    }
+    
+    public static String getTestImageDescription() {
+        
+        String desc = "The image contains several iconic Disney characters, including Goofy, Daisy Duck, and Mickey Mouse. There is no human face visible in the image.The image appears to be a stylized, minimalist representation of these classic cartoon characters. The characters are depicted as simple line drawings in a limited color palette of black, white, yellow, and red.Goofy is shown with his signature large ears and mouth, while Daisy Duck is recognizable by her distinctive red bow. Mickey Mouse is depicted as a minimalist silhouette, capturing his iconic rounded shape and ears.This seems to be an artistic rendering or logo design featuring these beloved Disney characters, rather than a scene from a specific show or movie.";
+        
+        return desc;
     }
 
 }
