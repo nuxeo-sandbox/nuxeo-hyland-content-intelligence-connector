@@ -27,6 +27,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.nuxeo.ecm.core.cache.Cache;
 import org.nuxeo.ecm.core.cache.CacheService;
 import org.nuxeo.runtime.api.Framework;
@@ -100,6 +102,15 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
                 
                 response = finalResponse.toString();
                 //System.out.println(response);
+                
+                try {
+                    JSONObject responseJson = new JSONObject(response);
+                    responseJson.put("responseCode", responseCode);
+                    responseJson.put("responseMessage", conn.getResponseMessage());
+                    response = responseJson.toString();
+                } catch (JSONException e) {
+                    // Ouch. This is not JSON, let it as it is
+                }
                 
                 if (useCache) {
                     CacheService cacheService = Framework.getService(CacheService.class);
