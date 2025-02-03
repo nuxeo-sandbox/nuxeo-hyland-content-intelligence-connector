@@ -23,6 +23,9 @@ See unit tests at `TestHylandCIService` for examples of payload.
 
 The plugin expects 3 parameters to be configured in nuxeo.conf:
 
+> [!IMPORTANT]
+> Without these values set, the calls to Hyland COntent Intelligence can only fail.
+
 * `nuxeo.hyland.content.intelligence.baseUrl`
 * `nuxeo.hyland.content.intelligence.authenticationHeaderName`
 * `nuxeo.hyland.content.intelligence.authenticationHeaderValue`
@@ -32,8 +35,8 @@ These values are provided by Hyland and are expected to change in a short future
 
 ### The `HylandContentIntelligence.Invoke` Operation
 
-* Input: `void``
-* Output: A `Blob` (see below) 
+* Input: `void`
+* Output: `Blob` (see below) 
 * Parameters
   * `endpoint`: String required. The endpoint to call. "/description" for example.
   * `jsonPayload`: String, required. The JSON expected by the endpoint.
@@ -69,7 +72,8 @@ function run(input, params) {
   // Encode with the helper
   var base64 = Base64Helper.blob2Base64(blob);
 
-  // Prepare the call to Hyland Content Intelligence
+  // Prepare the call to Hyland Content Intelligence, with the
+  // payload expected by the "/description" endpoint.
   var payload = {
     "type" : "base64",
     "media_type": blob.getMimeType(),
@@ -110,7 +114,7 @@ mvn clean install
 
 You can add the `-DskipDocker` flag to skip building with Docker.
 
-Also you can use the `DskipTests` flag
+Also you can use the `-DskipTests` flag
 
 ### How to UnitTest
 
