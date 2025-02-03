@@ -11,7 +11,7 @@ There is a single entry point to call the service: An automation operation, `Hyl
 
 The plugin does add some optional optimization though: A cache. If the service is called for the same JSON payload, then a cached value is returned. This is optional and can be turned off on a per call basis. The default value is `false`.
 
-This plugin duplicates several features from [nuxeo-baws-bedrock-connector](https://github.com/nuxeo-sandbox/nuxeo-aws-bedrock-connector), especially all the work around using vector search with openSearch. As a start, it replaces the calls to AWS Bedrock to calls to [Hyland Content Intelligence](https://www.hyland.com/en), to calculate embedding, get the description of an image and tag an image with custom metadata.
+This plugin duplicates several features from [nuxeo-baws-bedrock-connector](https://github.com/nuxeo-sandbox/nuxeo-aws-bedrock-connector). As a start, it replaces the calls to AWS Bedrock to calls to [Hyland Content Intelligence](https://www.hyland.com/en), to get the description of an image and tag an image with custom metadata. As more endpoints are added to the service, they'll become available from the operation.
 
 ## Usage
 
