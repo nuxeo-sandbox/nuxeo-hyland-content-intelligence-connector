@@ -5,11 +5,11 @@
 
 A plugin that connects to Hyland Content Intelligence and leverage some of its API.
 
-This plugin just sends the request and returns its JSON response, it does not add any logic. This is for flexibility: When Hyland Content Intelligence adds new endpoints, and/or add/change endpoint parameters, no need to change this plugin, just modify the caller (in most of our usages, Nuxeo Studio project and JavaScript Automation, see examples below).
+This plugin just sends the request and returns its JSON response, it does not add any logic. This is for flexibility: When Hyland Content Intelligence adds new endpoints, and/or adds/changes endpoint expected payload, no need to change the code of the plugin, just modify the caller (in most of our usages, Nuxeo Studio project and JavaScript Automation, see examples below).
 
-There is a single entry point to call the service: An automation operation, `HylandContentIntelligence.Invoke`, that expects the endpoint to call and a JSON payload expected for this endpoint.
+There is a single entry point to call the service: An automation operation, `HylandContentIntelligence.Invoke`, that expects the endpoint to call and the corresponding JSON payload.
 
-The plugin does add some optional optimization though: A cache. If the service is called for the same JSON payload, then a cached value is returned. This is optional and can be turned off on a per call basis
+The plugin does add some optional optimization though: A cache. If the service is called for the same JSON payload, then a cached value is returned. This is optional and can be turned off on a per call basis. The default value is `false`.
 
 This plugin duplicates several features from [nuxeo-baws-bedrock-connector](https://github.com/nuxeo-sandbox/nuxeo-aws-bedrock-connector), especially all the work around using vector search with openSearch. As a start, it replaces the calls to AWS Bedrock to calls to [Hyland Content Intelligence](https://www.hyland.com/en), to calculate embedding, get the description of an image and tag an image with custom metadata.
 
@@ -17,10 +17,88 @@ This plugin duplicates several features from [nuxeo-baws-bedrock-connector](http
 
 From Nuxeo Studio, create an automation script that calls the operation, passing it the payload expected for the entry point.
 
-See unit tests at `TestHylandCIService` for examples of payload
+See unit tests at `TestHylandCIService` for examples of payload.
+
+### Nuxeo Configuration Parameters
+
+The plugin expects 3 parameters to be configured in nuxeo.conf:
+
+* `nuxeo.hyland.content.intelligence.baseUrl`
+* `nuxeo.hyland.content.intelligence.authenticationHeaderName`
+* `nuxeo.hyland.content.intelligence.authenticationHeaderValue`
+
+These values are provided by Hyland and are expected to change in a short future (remember, this plugin is Work in Progress). If you are a Hyland customer, please contact us to discuss your use case.
+
+
+### The `HylandContentIntelligence.Invoke` Operation
+
+* Input: `void``
+* Output: A `Blob` (see below) 
+* Parameters
+  * `endpoint`: String required. The endpoint to call. "/description" for example.
+  * `jsonPayload`: String, required. The JSON expected by the endpoint.
+  * `useCache`: Boolean, optional. Use cached response if `true`. Default is `false`.
+
+The returned Blob holds Hyland Content Intelligence REST API JSON response and information about the call itself. It is a `StringBlob`, use its `getString()` method to get the JSON String (see Automation Scripting example below). The properties of this JSON depend on the endpoint. The plugin always add 2 properties:
+
+* `responseCode`: The HTTP code (200 is OK, etc.)
+* `responseMessage`: The HTTP resonse message
+
 
 > [!WARNING]
-> This plugin is Work in Progress and the service itself is Work in Progress. The endpoint, the payload may change.
+> This plugin is Work in Progress and the service itself is Work in Progress. The endpoints, the payloads will change.
+
+### `Base64Helper` Automation Helper
+
+The plugin also provides the `Base64Helper` Automation Helper, that allows for creating the Base64 representation of a blob or a String:
+
+* `Base64Helper.blob2Base64(aBlob)`
+* `Base64Helper.string2Base64(aString)`
+
+(See Automation Script example below)
+
+### Example
+
+Getting the description of an image:
+
+```js
+function run(input, params) {
+  // Get a rendition (don't send a 300MB Photoshop))
+  var blob = Picture.GetView(input, {'viewName': 'FullHD'});
+
+  // Encode with the helper
+  var base64 = Base64Helper.blob2Base64(blob);
+
+  // Prepare the call to Hyland Content Intelligence
+  var payload = {
+    "type" : "base64",
+    "media_type": blob.getMimeType(),
+    "override_request": "",
+    "data": base64
+  };
+
+  // Call the operation (not using the cache)
+  var responseBlob = HylandContentIntelligence.Invoke(null, {
+    "endpoint": "/description",
+    "jsonPayload": JSON.stringify(payload)
+  });
+
+  // Get the result
+  var responseJson = JSON.parse(responseBlob.getString());
+
+  // Check the result
+  if(responseJson.errorCode !== 200) {
+    // . . . handle error . . . throw and error, or just log responseJson.errorMessage . . .
+  } else {
+    // Save the description
+    // For "/description", the result is in the "response" property
+    input["dc:description"] = responseJson.response;
+    input = Document.Save(input, {});
+  }
+
+  return input;
+}
+```
 
 
 ## How to build
@@ -36,13 +114,13 @@ Also you can use the `DskipTests` flag
 
 ### How to UnitTest
 
-You need to set up 3 environement variables that will be used to connect to the service:
+You need to set up 3 environment variables that will be used to connect to the service:
 
 * `HYLAND_CONTENT_INTELL_URL`
 * `HYLAND_CONTENT_INTELL_HEADER_NAME`
 * `HYLAND_CONTENT_INTELL_HEADER_VALUE`
 
-These values are provided by the service. Remember, this is Work In Progress, we are changing the URL of the service, the authentication methods etc., hence why this is temporary until the servioce is final.
+These values are provided by the service. Remember, this is Work In Progress, we are changing the URL of the service, the authentication methods etc., hence why this is temporary until the service is final.
 
 
 ## Support
