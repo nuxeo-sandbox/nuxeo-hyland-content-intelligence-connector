@@ -2,7 +2,7 @@
 <package type="addon" name="nuxeo-hyland-content-intelligence-connector" version="@VERSION@">
   <title>Nuxeo Hyland Content Intelligence Connector</title>
   <description>
-    <p>A connector for yland Content Intelligence</p>
+    <p>A connector for Hyland Content Intelligence</p>
   </description>
   <home-page>https://github.com/nuxeo-sandbox/nuxeo-hyland-content-intelligence-connector</home-page>
   <vendor>Hyland</vendor>
