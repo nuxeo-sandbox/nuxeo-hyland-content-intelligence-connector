@@ -91,8 +91,8 @@ function run(input, params) {
   var responseJson = JSON.parse(responseBlob.getString());
 
   // Check the result
-  if(responseJson.errorCode !== 200) {
-    // . . . handle error . . . throw and error, or just log responseJson.errorMessage . . .
+  if(responseJson.responseCode !== 200) {
+    // . . . handle error . . . throw and error, or just log responseJson.responseCode + ", " + responseJson.responseMessage . . .
   } else {
     // Save the description
     // For "/description", the result is in the "response" property
