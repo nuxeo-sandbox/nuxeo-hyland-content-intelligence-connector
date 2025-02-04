@@ -25,6 +25,9 @@ import static org.nuxeo.labs.hyland.content.intelligence.service.HylandCIService
 import static org.nuxeo.labs.hyland.content.intelligence.service.HylandCIServiceImpl.getCacheKey;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -49,6 +52,8 @@ import java.util.Base64;
 @Features({ PlatformFeature.class, ConfigCheckerFeature.class })
 @Deploy("nuxeo-hyland-content-intelligence-connector-core")
 public class TestHylandCIService {
+    
+    private static final Logger log = LogManager.getLogger(TestHylandCIService.class);
 
     protected static final String TEST_IMAGE_PATH = "/files/dc-3.jpg";
 
@@ -104,6 +109,94 @@ public class TestHylandCIService {
                 responseCode == 200);
         String description = responseBody.getString("response");
         assertNotNull(description);
+        description = description.toLowerCase();
+        // Not correctly identifying the characters is not an issue with the plugin,
+        // it is an issue with the service.
+        // => Should we fail the test ?
+        /*
+        assertTrue(description.indexOf("disney") > -1);
+        assertTrue(description.indexOf("mickey") > -1);
+        assertTrue(description.indexOf("goofy") > -1);
+        assertTrue(description.indexOf("daisy") > -1);
+        */
+        if(description.indexOf("disney") < 0) {
+            log.warn("The service could not identify Disney");
+        }
+        if(description.indexOf("mickey") < 0) {
+            log.warn("The service could not identify Mickey");
+        }
+        if(description.indexOf("daisy") < 0) {
+            log.warn("The service could not identify Daisy");
+        }
+        if(description.indexOf("goofy") < 0) {
+            log.warn("The service could not identify Goofy");
+        }
+        /*
+         * if(responseCode == 200) {
+         * String description = responseBody.getString("response");
+         * assertNotNull(description);
+         * } else {
+         * throw new NuxeoException("Error calling the service. Response:\n" + responseBody.toString(2));
+         * }
+         */
+    }
+    
+    @Test
+    public void testGetImageDescriptionWithOverrideRequest() throws Exception {
+
+        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+        
+        String payload = String.format("""
+                {
+                    "type" : "base64",
+                    "media_type": "%s",
+                    "override_request": "Return the response in maximum 50 words and in French, with the French names of the characters.",
+                    "data": "%s"
+                }
+                """, TEST_IMAGE_MIMETYPE, testImageBase64);
+
+        String response = hylandCIService.invoke("/description", payload);
+        assertNotNull(response);
+
+        JSONObject responseBody = new JSONObject(response);
+        assertNotNull(responseBody);
+
+        int responseCode = responseBody.getInt("responseCode");
+        String responseMessage = responseBody.getString("responseMessage");
+        // If there is a failure, is it of the service of the test?
+        // Should we fail or assumeTrue?
+        Assume.assumeTrue("Service returned code " + responseCode + "(" + responseMessage + ") => ignoring the test.",
+                responseCode == 200);
+        String description = responseBody.getString("response");
+        assertNotNull(description);
+        description = description.toLowerCase();
+        // This is not Rocket Science word counting, but good enough for the UnitTest
+        int wordCount = StringUtils.split(description, " ").length;
+        assertTrue(wordCount < 60);
+        
+        // How to simply check it is French?
+        
+        // Not correctly identifying the characters is not an issue with the plugin,
+        // it is an issue with the service.
+        // => Should we fail the test ?
+        /*
+        assertTrue(description.indexOf("disney") > -1);
+        assertTrue(description.indexOf("mickey") > -1);
+        assertTrue(description.indexOf("daisy") > -1);
+        assertTrue(description.indexOf("dingo") > -1);
+        */
+        if(description.indexOf("disney") < 0) {
+            log.warn("The service could not identify Disney");
+        }
+        if(description.indexOf("mickey") < 0) {
+            log.warn("The service could not identify Mickey");
+        }
+        if(description.indexOf("daisy") < 0) {
+            log.warn("The service could not identify Daisy");
+        }
+        if(description.indexOf("dingo") < 0) { // Goofy is "Dingo" in French
+            log.warn("The service could not identify Dingo");
+        }
         /*
          * if(responseCode == 200) {
          * String description = responseBody.getString("response");
@@ -114,7 +207,6 @@ public class TestHylandCIService {
          */
     }
 
-    // TODO: unit test the /metadata endpoint
     @Test
     public void testGetImageMetadata() throws Exception {
 
@@ -212,7 +304,7 @@ public class TestHylandCIService {
 
     }
 
-    // TODO: unit test the /embedding endpoint
+    // TODO: unit test the /embeddings endpoint, if it is implemented
     @Test
     public void testGetImageEmbedding() throws Exception {
 
