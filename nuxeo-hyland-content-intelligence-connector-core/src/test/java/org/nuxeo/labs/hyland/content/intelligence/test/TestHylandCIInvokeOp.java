@@ -61,7 +61,7 @@ public class TestHylandCIInvokeOp {
     @Test
     public void testImageDescription() throws OperationException, IOException {
 
-        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+        Assume.assumeTrue(ConfigCheckerFeature.hasObsoleteQuickDemoInfo());
 
         OperationContext ctx = new OperationContext(session);
         Map<String, Object> params = new HashMap<>();

@@ -3,6 +3,13 @@
 > [!WARNING]
 > This plugin is Work in Progress.
 
+> [!IMPORTANT]
+> As of May 2025, It is in full rework/rewrite state: Hyland Content Intelligence has evolved, more APIs are available, usage has changed, etc.
+> 
+> So, please, **do not use it as is**, it will not work. For now, using GitHub more as as backup than a pre-release work :-)
+
+<hr>
+
 A plugin that connects to Hyland Content Intelligence and leverage some of its API.
 
 This plugin just sends the request and returns its JSON response, it does not add any logic. This is for flexibility: When Hyland Content Intelligence adds new endpoints, and/or adds/changes endpoint expected payload, no need to change the code of the plugin, just modify the caller (in most of our usages, Nuxeo Studio project and JavaScript Automation, see examples below).

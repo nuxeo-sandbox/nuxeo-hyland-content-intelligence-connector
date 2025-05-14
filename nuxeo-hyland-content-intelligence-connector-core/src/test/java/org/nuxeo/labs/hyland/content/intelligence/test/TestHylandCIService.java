@@ -39,6 +39,7 @@ import org.nuxeo.ecm.core.cache.CacheService;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.labs.hyland.content.intelligence.service.HylandCIService;
 import org.nuxeo.labs.hyland.content.intelligence.service.HylandCIServiceImpl;
+import org.nuxeo.labs.hyland.content.intelligence.service.HylandCIServiceImpl.CICService;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -75,6 +76,17 @@ public class TestHylandCIService {
             testImageBase64 = Base64.getEncoder().encodeToString(fileContent);
         }
     }
+    
+    @Test
+    public void quickTestToBeReworked() {
+        
+        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
+        
+        HylandCIServiceImpl sce = (HylandCIServiceImpl) hylandCIService;
+        // Quick test. This methig should not be public
+        String token = sce.fetchAuthTokenIfNeeded(CICService.ENRICHMENT);
+        assertNotNull(token);
+    }
 
     @Test
     public void testService() {
@@ -84,7 +96,7 @@ public class TestHylandCIService {
     @Test
     public void testGetImageDescription() throws Exception {
 
-        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+        Assume.assumeTrue(ConfigCheckerFeature.hasObsoleteQuickDemoInfo());
 
         String payload = String.format("""
                 {
@@ -144,7 +156,7 @@ public class TestHylandCIService {
     @Test
     public void testGetImageDescriptionWithOverrideRequest() throws Exception {
 
-        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+        Assume.assumeTrue(ConfigCheckerFeature.hasObsoleteQuickDemoInfo());
         
         String payload = String.format("""
                 {
@@ -210,7 +222,7 @@ public class TestHylandCIService {
     @Test
     public void testGetImageMetadata() throws Exception {
 
-        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+        Assume.assumeTrue(ConfigCheckerFeature.hasObsoleteQuickDemoInfo());
 
         String payload = String.format(
                 """
@@ -313,7 +325,7 @@ public class TestHylandCIService {
     @Test
     public void testResponseCaching() {
 
-        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+        Assume.assumeTrue(ConfigCheckerFeature.hasObsoleteQuickDemoInfo());
 
         String endpoint = "/description";
 
@@ -337,7 +349,7 @@ public class TestHylandCIService {
     @Test
     public void testCacheHit() {
 
-        Assume.assumeTrue(ConfigCheckerFeature.isSetup());
+        Assume.assumeTrue(ConfigCheckerFeature.hasObsoleteQuickDemoInfo());
 
         String endpoint = "the endpoint that don't exist yet";
         String payload = """

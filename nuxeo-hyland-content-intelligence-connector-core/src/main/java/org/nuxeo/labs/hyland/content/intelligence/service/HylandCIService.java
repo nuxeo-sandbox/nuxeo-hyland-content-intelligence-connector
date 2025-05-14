@@ -19,13 +19,18 @@
  */
 package org.nuxeo.labs.hyland.content.intelligence.service;
 
+import org.apache.commons.lang3.StringUtils;
+import org.nuxeo.runtime.api.Framework;
+
 public interface HylandCIService {
 
+    // ==================== These 3 params were for quick test and demos before CIC API changed
     public static final String CONTENT_INTELL_URL_PARAM = "nuxeo.hyland.content.intelligence.baseUrl";
 
     public static final String CONTENT_INTELL_HEADER_NAME_PARAM = "nuxeo.hyland.content.intelligence.authenticationHeaderName";
 
     public static final String CONTENT_INTELL_HEADER_VALUE_PARAM = "nuxeo.hyland.content.intelligence.authenticationHeaderValue";
+    // ====================
 
     String invoke(String endpoint, String jsonPayload);
 
