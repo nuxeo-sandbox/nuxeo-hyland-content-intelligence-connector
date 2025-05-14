@@ -47,7 +47,7 @@ public class HylandCIInvokeOp {
 
     @OperationMethod
     public Blob run() {
-        String response = ciService.invoke(endpoint, jsonPayload, useCache);
+        String response = ciService.invokeObsoleteQuickDemo(endpoint, jsonPayload, useCache);
         return new StringBlob(response, "application/json");
     }
 

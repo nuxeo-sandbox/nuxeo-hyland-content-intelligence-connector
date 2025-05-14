@@ -24,16 +24,23 @@ import org.nuxeo.runtime.api.Framework;
 
 public interface HylandCIService {
 
-    // ==================== These 3 params were for quick test and demos before CIC API changed
+    // ====================================================================================================
+    /* Used when CIC provided APIs for quick demos, showing work in progress
+     * Not to be used, these APIs and the server will be removed/shutdown at some point.
+     */
     public static final String CONTENT_INTELL_URL_PARAM = "nuxeo.hyland.content.intelligence.baseUrl";
 
     public static final String CONTENT_INTELL_HEADER_NAME_PARAM = "nuxeo.hyland.content.intelligence.authenticationHeaderName";
 
     public static final String CONTENT_INTELL_HEADER_VALUE_PARAM = "nuxeo.hyland.content.intelligence.authenticationHeaderValue";
-    // ====================
+    
+    public String invokeObsoleteQuickDemo(String endpoint, String jsonPayload);
+    
+    public String invokeObsoleteQuickDemo(String endpoint, String jsonPayload, boolean useCache);
+    // ====================================================================================================
 
-    String invoke(String endpoint, String jsonPayload);
+    String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload);
 
-    String invoke(String endpoint, String jsonPayload, boolean useCache);
+    String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload, boolean useCache);
 
 }

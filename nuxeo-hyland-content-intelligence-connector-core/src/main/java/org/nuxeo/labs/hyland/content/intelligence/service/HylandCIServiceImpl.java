@@ -20,13 +20,16 @@
 package org.nuxeo.labs.hyland.content.intelligence.service;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -55,13 +58,13 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
     public static final String ENDPOINT_AUTH_DEFAULT = "https://auth.iam.experience.hyland.com/idp/connect/token";
 
-    public static final String ENDPOINT_DATA_CURATION_PARAM = "nuxeo.hyland.cic.endpoint.dataCuration";
-
-    public static final String ENDPOINT_DATA_CURATION_DEFAULT = "https://fgg6le8a5b.execute-api.us-east-1.amazonaws.com"; // /api
-
     public static final String ENDPOINT_CONTEXT_ENRICHMENT_PARAM = "nuxeo.hyland.cic.endpoint.contextEnrichment";
 
     public static final String ENDPOINT_CONTEXT_ENRICHMENT_DEFAULT = "https://cin-context-api.experience.hyland.com/context"; // /api
+
+    public static final String ENDPOINT_DATA_CURATION_PARAM = "nuxeo.hyland.cic.endpoint.dataCuration";
+
+    public static final String ENDPOINT_DATA_CURATION_DEFAULT = "https://fgg6le8a5b.execute-api.us-east-1.amazonaws.com"; // /api
 
     public static String enrichmentClientId = null;
 
@@ -73,15 +76,19 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
     public static String authEndPoint = null;
 
-    public static String dataCurationEndPoint = null;
-
     public static String contextEnrichmentEndPoint = null;
+
+    public static String dataCurationEndPoint = null;
 
     public static final String CONTENT_INTELL_CACHE = "content_intelligence_cache";
 
     protected static String enrichmentAuthToken = null;
+    
+    protected static Instant enrichmentTokenExpiration = null;
 
     protected static String dataCurationAuthToken = null;
+    
+    protected static Instant dataCurationTokenExpiration = null;
 
     public enum CICService {
         ENRICHMENT, DATA_CURATION
@@ -160,7 +167,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
     }
 
     // TODO
-    // THis methid should not be public. Made public for quick unit test.
+    // THis method should not be public. Made public for quick unit test.
     public String fetchAuthTokenIfNeeded(CICService service) {
 
         // TODO
@@ -168,10 +175,9 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
         String clientId, clientSecret;
 
-        // Should we handle "expires_in"?
         switch (service) {
         case ENRICHMENT:
-            if (StringUtils.isNotBlank(enrichmentAuthToken)) {
+            if (StringUtils.isNotBlank(enrichmentAuthToken) && !Instant.now().isAfter(enrichmentTokenExpiration)) {
                 return enrichmentAuthToken;
             }
             clientId = enrichmentClientId;
@@ -179,7 +185,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
             break;
 
         case DATA_CURATION:
-            if (StringUtils.isNotBlank(dataCurationAuthToken)) {
+            if (StringUtils.isNotBlank(dataCurationAuthToken) && !Instant.now().isAfter(dataCurationTokenExpiration)) {
                 return dataCurationAuthToken;
             }
             clientId = dataCurationClientId;
@@ -192,31 +198,32 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
         String targetUrl = authEndPoint;
 
+        HttpURLConnection connection = null;
         try {
             URL url = new URL(targetUrl);
 
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) url.openConnection();
 
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Accept", "*/*");
-            conn.setRequestProperty("Accept-Encoding", "gzip, deflate, br");
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Accept", "*/*");
+            connection.setRequestProperty("Accept-Encoding", "gzip, deflate, br");
             // Not JSON...
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            conn.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connection.setDoOutput(true);
 
             // Write request body
             String postData = "client_id=" + URLEncoder.encode(clientId, "UTF-8") + "&client_secret="
                     + URLEncoder.encode(clientSecret, "UTF-8") + "&grant_type=client_credentials"
                     + "&scope=environment_authorization";
 
-            try (OutputStream os = conn.getOutputStream()) {
+            try (OutputStream os = connection.getOutputStream()) {
                 os.write(postData.getBytes("UTF-8"));
             }
 
             // Get response code
-            int status = conn.getResponseCode();
+            int status = connection.getResponseCode();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    (status >= 200 && status < 300) ? conn.getInputStream() : conn.getErrorStream(),
+                    (status >= 200 && status < 300) ? connection.getInputStream() : connection.getErrorStream(),
                     StandardCharsets.UTF_8))) {
                 StringBuilder response = new StringBuilder();
                 String line;
@@ -232,13 +239,16 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
                     }
                     log.error(msg);
                 } else {
+                    int expiresIn = responseJson.getInt("expires_in");
                     switch (service) {
                     case ENRICHMENT:
                         enrichmentAuthToken = responseJson.getString("access_token");
+                        enrichmentTokenExpiration = Instant.now().plusSeconds(expiresIn - 15);
                         break;
 
                     case DATA_CURATION:
                         dataCurationAuthToken = responseJson.getString("access_token");
+                        dataCurationTokenExpiration = Instant.now().plusSeconds(expiresIn - 15);
                         break;
                     }
                     // should we get "expires_in"?
@@ -247,6 +257,11 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
         } catch (IOException e) {
             throw new NuxeoException(e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+                connection = null;
+            }
         }
 
         switch (service) {
@@ -260,18 +275,137 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
         return null;
     }
 
-    public String invoke(String endpoint, String jsonPayload) {
-        return invoke(endpoint, jsonPayload, false);
+    public String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload) {
+        return invokeEnrichment(httpMethod, endpoint, jsonPayload, false);
     }
 
-    public String invoke(String endpoint, String jsonPayload, boolean useCache) {
+    public String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload, boolean useCache) {
 
         String response = null;
 
         if (useCache) {
             CacheService cacheService = Framework.getService(CacheService.class);
             Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-            String cacheKey = getCacheKey(endpoint, jsonPayload);
+            String cacheKey = getCacheKey(httpMethod, endpoint, jsonPayload);
+            if (cache.hasEntry(cacheKey)) {
+                return (String) cache.get(cacheKey);
+            }
+        }
+
+        httpMethod = httpMethod.toUpperCase();
+        // Sanitycheck
+        switch (httpMethod) {
+        case "GET":
+        case "POST":
+        case "PUT":
+            // OK;
+            break;
+
+        default:
+            throw new NuxeoException("Only GET, POST and PU are supported.");
+        }
+
+        // Get auth token
+        String bearer = fetchAuthTokenIfNeeded(CICService.ENRICHMENT);
+        if (StringUtils.isBlank(bearer)) {
+            throw new NuxeoException("No authentication info for calling the service.");
+        }
+
+        // Get config parameter values for URL to call, authentication, etc.
+        String targetUrl = contextEnrichmentEndPoint;
+
+        if (!endpoint.startsWith("/")) {
+            targetUrl += "/";
+        }
+        targetUrl += endpoint;
+
+        // Let's use the good old HttpURLConnection.
+        HttpURLConnection conn = null;
+        try {
+            // Create the URL object
+            URL url = new URL(targetUrl);
+            conn = (HttpURLConnection) url.openConnection();
+
+            conn.setRequestMethod(httpMethod);
+
+            // Headers
+            // conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Accept", "*/*");
+            conn.setRequestProperty("Authorization", "Bearer " + bearer);
+
+            // Body, if any.
+            if ("POST".equals(httpMethod) || "PUT".equals(httpMethod)) {
+                conn.setDoOutput(true);
+                // Write JSON data to request body
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
+                    os.write(input, 0, input.length);
+                }
+            }
+
+            // Get response code
+            int responseCode = conn.getResponseCode();
+            
+            if (responseCode >= 200 && responseCode < 300) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    StringBuilder finalResponse = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        finalResponse.append(line.trim());
+                    }
+                    response = buildJsonResponseString(finalResponse.toString(), responseCode, conn.getResponseMessage());
+
+                    if (useCache) {
+                        CacheService cacheService = Framework.getService(CacheService.class);
+                        Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
+                        cache.put(getCacheKey(httpMethod, endpoint, jsonPayload), response);
+                    }
+                }
+            } else {
+                response = buildJsonResponseString("{}", responseCode, conn.getResponseMessage());
+            }
+
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+                conn = null;
+            }
+        }
+
+        return response;
+    }
+    
+    protected String buildJsonResponseString(String response, int responseCode, String responseMessage) {
+        String jsonResponseStr = "{";
+        jsonResponseStr += "\"response\": " + response + ",";
+        jsonResponseStr += "\"responseCode\": " + responseCode + ",";
+        jsonResponseStr += "\"responseMessage\": \"" + (responseMessage == null ? "" : responseMessage) + "\"";
+        jsonResponseStr += "}";
+        
+        return jsonResponseStr;
+    }
+
+    // ================================================================================
+    // ================================================================================
+    // ================================================================================
+    /*
+     * Used when CIC provided APIs for quick demos, showing work in progress
+     * Not to be used, these APIs and the server will be removed/shutdown at some point.
+     */
+    public String invokeObsoleteQuickDemo(String endpoint, String jsonPayload) {
+        return invokeObsoleteQuickDemo(endpoint, jsonPayload, false);
+    }
+
+    public String invokeObsoleteQuickDemo(String endpoint, String jsonPayload, boolean useCache) {
+
+        String response = null;
+
+        if (useCache) {
+            CacheService cacheService = Framework.getService(CacheService.class);
+            Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
+            String cacheKey = getCacheKey("POST", endpoint, jsonPayload);
             if (cache.hasEntry(cacheKey)) {
                 return (String) cache.get(cacheKey);
             }
@@ -290,10 +424,11 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
         // For whatever reason I have don't time to explore, using the more modern java.net.http.HttpClient;
         // fails, the authentication header is not corrcetly received...
         // So, let's go back to good old HttpURLConnection.
+        HttpURLConnection conn = null;
         try {
             // Create the URL object
             URL url = new URL(targetUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn = (HttpURLConnection) url.openConnection();
 
             // Set request method to POST
             conn.setRequestMethod("POST");
@@ -338,7 +473,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
                 if (useCache) {
                     CacheService cacheService = Framework.getService(CacheService.class);
                     Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-                    cache.put(getCacheKey(endpoint, jsonPayload), response);
+                    cache.put(getCacheKey("POST", endpoint, jsonPayload), response);
                 }
             }
 
@@ -347,13 +482,18 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+                conn = null;
+            }
         }
 
         return response;
     }
 
-    public static String getCacheKey(String endpoint, String jsonPayload) {
-        return endpoint + jsonPayload;
+    public static String getCacheKey(String httpMethod, String endpoint, String jsonPayload) {
+        return httpMethod + endpoint + (jsonPayload == null ? "nopayload" : jsonPayload);
     }
 
 }
