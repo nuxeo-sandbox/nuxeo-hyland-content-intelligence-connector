@@ -49,6 +49,7 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.io.IOException;
 import java.util.Base64;
 
 @RunWith(FeaturesRunner.class)
@@ -138,9 +139,33 @@ public class TestHylandCIService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
         
-        String result = hylandCIService.invokeEnrichment("GET", "/api/files/upload/presigned-url?contentType=image%2Fpng", null);
+        String result = hylandCIService.invokeEnrichment("GET", "/api/files/upload/presigned-url?contentType=" + TEST_IMAGE_MIMETYPE.replace("/", "%2F"), null);
+        assertNotNull(result);
+        JSONObject resultJson = new JSONObject(result);
+
+        int responseCode = resultJson.getInt("responseCode");
+        assertEquals(responseCode, 200);
+        
+        JSONObject response = resultJson.getJSONObject("response");
         assertNotNull(result);
         
+        String presignedUrl = response.getString("presignedUrl");
+        assertNotNull(result);
+        
+        String objectKey = response.getString("objectKey");
+        assertNotNull(objectKey);
+        
+    }
+    
+    @Test
+    public void shouldEnrichFile() throws Exception {
+        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
+
+        HylandCIServiceImpl sce = (HylandCIServiceImpl) hylandCIService;
+        
+        File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
+        String result = sce.enrich(f, TEST_IMAGE_MIMETYPE, "image-description");
+        assertNotNull(result);
     }
 
 }
