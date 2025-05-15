@@ -34,6 +34,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -45,6 +46,7 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.cache.Cache;
 import org.nuxeo.ecm.core.cache.CacheService;
+import org.nuxeo.ecm.platform.mimetype.interfaces.MimetypeRegistry;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.DefaultComponent;
 
@@ -82,6 +84,14 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
     public static final String ENDPOINT_DATA_CURATION_DEFAULT = "https://fgg6le8a5b.execute-api.us-east-1.amazonaws.com"; // /api
 
+    public static final String PULL_RESULTS_MAX_TRIES_PARAM = "nuxeo.hyland.cic.pullResultsMaxTries";
+
+    public static final int PULL_RESULTS_MAX_TRIES_DEFAULT = 10;
+
+    public static final String PULL_RESULTS_SLEEP_INTERVALL_PARAM = "nuxeo.hyland.cic.pullResultsSleepIntervall";
+
+    public static final int PULL_RESULTS_SLEEP_INTERVALL_DEFAULT = 3000;
+
     public static String enrichmentClientId = null;
 
     public static String enrichmentClientSecret = null;
@@ -105,6 +115,10 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
     protected static String dataCurationAuthToken = null;
 
     protected static Instant dataCurationTokenExpiration = null;
+
+    protected static int pullResultsMaxTries;
+
+    protected static int pullResultsSleepIntervall;
 
     public enum CICService {
         ENRICHMENT, DATA_CURATION
@@ -179,6 +193,19 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
             log.warn("No CIC Data Curation ClientSecret provided (" + DATA_CURATION_CLIENT_SECRET_PARAM
                     + "), calls to the service will fail.");
         }
+
+        // ==========> Other params
+        String param = Framework.getProperty(PULL_RESULTS_MAX_TRIES_PARAM);
+        if (StringUtils.isBlank(param)) {
+            param = "" + PULL_RESULTS_MAX_TRIES_DEFAULT;
+        }
+        pullResultsMaxTries = Integer.parseInt(param);
+
+        param = Framework.getProperty(PULL_RESULTS_SLEEP_INTERVALL_PARAM);
+        if (StringUtils.isBlank(param)) {
+            param = "" + PULL_RESULTS_SLEEP_INTERVALL_DEFAULT;
+        }
+        pullResultsSleepIntervall = Integer.parseInt(param);
 
     }
 
@@ -299,46 +326,108 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
      * 5. Process
      * 6. Get results (loop to check when done)
      */
-    public String enrich(Blob blob, String action) throws IOException {
-        
-        return enrich(blob.getFile(), blob.getMimeType(), action);
+    public String enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata) throws IOException {
+
+        String mimeType = blob.getMimeType();
+        if (StringUtils.isBlank(mimeType)) {
+            // This can happen when Blob is built manually
+            MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
+            mimeType = registry.getMimetypeFromBlob(blob);
+        }
+        return enrich(blob.getFile(), blob.getMimeType(), actions, classes, similarMetadata);
     }
-    
-    public String enrich(File file, String mimeType, String action) throws IOException {
+
+    public String enrich(File file, String mimeType, List<String> actions, List<String> classes, List<String> similarMetadata) throws IOException {
 
         String result;
         JSONObject resultJson;
         JSONObject anObject;
-        
+        int responseCode;
+
+        if (StringUtils.isBlank(mimeType)) {
+            MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
+            mimeType = registry.getMimetypeFromFile(file);
+        }
+
         // (1. Token will be handled at first call)
+
         // 2. Get presigned URL
-        result = invokeEnrichment("GET", "/api/files/upload/presigned-url?contentType=" + mimeType.replace("/", "%2F"), null);
+        result = invokeEnrichment("GET", "/api/files/upload/presigned-url?contentType=" + mimeType.replace("/", "%2F"),
+                null);
         resultJson = new JSONObject(result);
-        
+        responseCode = resultJson.getInt("responseCode");
+        if(responseCode != 200) {
+            return result;
+        }
+
         anObject = resultJson.getJSONObject("response");
         String presignedUrl = anObject.getString("presignedUrl");
         String objectKey = anObject.getString("objectKey");
-        
+
         // 3. Upload file to this URL
-        int responseCode = uploadFileWithPut(file, presignedUrl, mimeType); //uploadFile(file, presignedUrl, mimeType);
-        
+        responseCode = uploadFileWithPut(file, presignedUrl, mimeType); // uploadFile(file, presignedUrl, mimeType);
+        if(responseCode != 200) {
+            return result;
+        }
+
         // 4. Get available actions
-        
+        // NOt checked here
+
         // 5. Process
         JSONObject payload = new JSONObject();
         payload.put("objectKeys", new JSONArray("[\"" + objectKey + "\"]"));
-        payload.put("actions", new JSONArray("[\"image-description\"]"));
-        payload.put("KSimilarMetadata", new JSONArray()); // What is this?
-        payload.put("Classes", new JSONArray()); // What is this?
-        
+        payload.put("actions", new JSONArray(actions));
+        if(similarMetadata == null) {
+            payload.put("kSimilarMetadata", new JSONArray());
+        } else {
+            payload.put("classes", new JSONArray(similarMetadata));
+        }
+        if(classes == null) {
+            payload.put("classes", new JSONArray());
+        } else {
+            payload.put("classes", new JSONArray(classes));
+        }
+
         result = invokeEnrichment("POST", "/api/content/process", payload.toString());
         resultJson = new JSONObject(result);
-        //anObject = resultJson.getJSONObject("response");
+        responseCode = resultJson.getInt("responseCode");
+        if(responseCode != 200) {
+            return result;
+        }
         String resultId = resultJson.getString("response");
-        
+        System.out.println("\nresultId " + resultId + "\n\n");
+
         // 6. Get results (loop to check when done)
-        result = invokeEnrichment("GET", "/api/content/process/" + resultId + "/results", null);
-                
+        result = pullResults(resultId);
+
+        return result;
+    }
+
+    public String pullResults(String resultId) {
+
+        String result;
+        JSONObject resultJson;
+        int responseCode;
+        int count = 1;
+
+        do {
+            if (count > 1) {
+                try {
+                    Thread.sleep(pullResultsSleepIntervall);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (count > 5) {
+                log.warn("Pulling results is taking time. This is the call #" + count + " (max calls: "
+                        + pullResultsMaxTries + ")");
+            }
+            result = invokeEnrichment("GET", "/api/content/process/" + resultId + "/results", null);
+            resultJson = new JSONObject(result);
+            responseCode = resultJson.getInt("responseCode");
+            count += 1;
+        } while (responseCode != 200 || count >= pullResultsMaxTries);
+
         return result;
     }
 
@@ -399,7 +488,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
             // conn.setRequestProperty("Content-Type", "application/json");
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("Authorization", "Bearer " + bearer);
-            if(endpoint.startsWith("/api/content/process")) {
+            if (endpoint.startsWith("/api/content/process")) {
                 conn.setRequestProperty("Content-Type", "application/json");
             }
 
@@ -563,7 +652,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
         return response;
     }
-    
+
     /**
      * To upload the file to the presigned URL, we don't need the bearer token of course, and it
      * is a simple upload.
@@ -575,15 +664,14 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
      */
     public static int uploadFile(File file, String targetUrl, String contentType) throws IOException {
         int responseCode;
-        
+
         HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
         conn.setDoOutput(true);
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", contentType);
         conn.setFixedLengthStreamingMode(file.length());
 
-        try (OutputStream out = conn.getOutputStream();
-             InputStream in = new FileInputStream(file)) {
+        try (OutputStream out = conn.getOutputStream(); InputStream in = new FileInputStream(file)) {
 
             byte[] buffer = new byte[8192];
             int bytesRead;
@@ -593,20 +681,21 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
         }
 
         responseCode = conn.getResponseCode();
-        //System.out.println("Response Code: " + responseCode);
+        // System.out.println("Response Code: " + responseCode);
 
         // Documentaitons tates the call returns nothing.
         return responseCode;
         /*
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(
-                responseCode >= 200 && responseCode < 300 ? conn.getInputStream() : conn.getErrorStream()))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                System.out.println(line);
-            }
-        }*/
+         * try (BufferedReader br = new BufferedReader(new InputStreamReader(
+         * responseCode >= 200 && responseCode < 300 ? conn.getInputStream() : conn.getErrorStream()))) {
+         * String line;
+         * while ((line = br.readLine()) != null) {
+         * System.out.println(line);
+         * }
+         * }
+         */
     }
-    
+
     public static int uploadFileWithPut(File file, String targetUrl, String contentType) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
         conn.setDoOutput(true);
@@ -614,8 +703,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
         conn.setRequestProperty("Content-Type", contentType);
         conn.setFixedLengthStreamingMode(file.length());
 
-        try (OutputStream out = conn.getOutputStream();
-             InputStream in = new FileInputStream(file)) {
+        try (OutputStream out = conn.getOutputStream(); InputStream in = new FileInputStream(file)) {
 
             byte[] buffer = new byte[8192];
             int bytesRead;
