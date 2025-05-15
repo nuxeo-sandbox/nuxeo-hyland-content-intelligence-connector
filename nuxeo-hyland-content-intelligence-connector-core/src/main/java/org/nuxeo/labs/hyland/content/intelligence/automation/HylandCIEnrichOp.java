@@ -40,7 +40,7 @@ import org.nuxeo.labs.hyland.content.intelligence.service.HylandCIService;
         + " and similarValues is used for metadata endpoint ")
 public class HylandCIEnrichOp {
 
-    public static final String ID = "HylandContentIntelligence.Invoke";
+    public static final String ID = "HylandContentIntelligence.Enrich";
 
     @Param(name = "actions", required = true)
     protected String actions;
