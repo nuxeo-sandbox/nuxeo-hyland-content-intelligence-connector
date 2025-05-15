@@ -238,7 +238,6 @@ public class TestHylandCIService {
         assertTrue(embeddingsJson.getBoolean("isSuccess"));
 
         JSONArray embeddings = embeddingsJson.getJSONArray("result");
-        // We should have at least "Mickey"
         assertTrue(embeddings.length() == 1024);
     }
 
@@ -265,6 +264,58 @@ public class TestHylandCIService {
 
         JSONArray results = response.getJSONArray("results");
         JSONObject theResult = results.getJSONObject(0);
+        JSONObject classificationJson = theResult.getJSONObject("imageClassification");
+        assertTrue(classificationJson.getBoolean("isSuccess"));
+
+        String classification = classificationJson.getString("result");
+        // So far the service returns the value lowercase anyway (which is a problem if the list of values are from a
+        // vocabulary)
+        assertEquals("disney", classification.toLowerCase());
+    }
+
+    @Test
+    public void shouldGetSeveralStuffOnImage() throws Exception {
+
+        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
+
+        HylandCIServiceImpl sce = (HylandCIServiceImpl) hylandCIService;
+
+        File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
+        String result = sce.enrich(f, TEST_IMAGE_MIMETYPE,
+                List.of("image-description", "image-embeddings", "image-classification"),
+                List.of("Disney", "DC Comics", "Marvel"), null);
+        assertNotNull(result);
+
+        JSONObject resultJson = new JSONObject(result);
+
+        // Expecting HTTP OK
+        assertEquals(200, resultJson.getInt("responseCode"));
+
+        JSONObject response = resultJson.getJSONObject("response");
+        String status = response.getString("status");
+        assertEquals("SUCCESS", status);
+
+        JSONArray results = response.getJSONArray("results");
+        JSONObject theResult = results.getJSONObject(0);
+        
+        // ==========> Description
+        JSONObject descriptionJson = theResult.getJSONObject("imageDescription");
+        assertTrue(descriptionJson.getBoolean("isSuccess"));
+
+        String description = descriptionJson.getString("result");
+        // We should have at least "Mickey"
+        assertTrue(description.toLowerCase().indexOf("mickey") > -1);
+        
+        
+        // ==========> Embeddings
+        JSONObject embeddingsJson = theResult.getJSONObject("imageEmbeddings");
+        assertTrue(embeddingsJson.getBoolean("isSuccess"));
+
+        JSONArray embeddings = embeddingsJson.getJSONArray("result");
+        assertTrue(embeddings.length() == 1024);
+        
+        
+        // ==========> Classification
         JSONObject classificationJson = theResult.getJSONObject("imageClassification");
         assertTrue(classificationJson.getBoolean("isSuccess"));
 

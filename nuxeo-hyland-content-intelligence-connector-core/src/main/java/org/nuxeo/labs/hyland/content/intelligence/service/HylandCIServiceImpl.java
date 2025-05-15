@@ -395,7 +395,6 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
             return result;
         }
         String resultId = resultJson.getString("response");
-        System.out.println("\nresultId " + resultId + "\n\n");
 
         // 6. Get results (loop to check when done)
         result = pullResults(resultId);
